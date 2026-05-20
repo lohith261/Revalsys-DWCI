@@ -2,7 +2,7 @@
 
 A premium, fullstack AI application that lets you upload PDF/DOCX documents, ask intelligent questions about them with perfect context retention, and seamlessly falls back to web search when documents don't contain the answer.
 
-**Live Stack:** React frontend (Vercel) + FastAPI backend (Railway/Render) + Upstash Redis
+**Live Stack:** React frontend (Vercel) + FastAPI backend + Upstash Redis
 
 ---
 
@@ -11,7 +11,9 @@ A premium, fullstack AI application that lets you upload PDF/DOCX documents, ask
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────────┐
 │   React     │────▶│   FastAPI    │────▶│    ChromaDB     │
-│  (Vercel)   │◄────│  (Railway)   │◄────│  (Vector Store) │
+│  (Vercel)   │◄────│  (Render/    │◄────│  (Vector Store) │
+│             │     │   Fly.io/    │     │                 │
+│             │     │   Heroku)    │     │                 │
 └─────────────┘     └──────────────┘     └─────────────────┘
                            │
                            ▼
@@ -50,7 +52,7 @@ A premium, fullstack AI application that lets you upload PDF/DOCX documents, ask
 - Redis (local or Upstash)
 - OpenRouter API key
 
-### 1. Clone & Configure
+### 1. Configure Environment
 
 ```bash
 cp .env.example .env
@@ -94,56 +96,162 @@ git init
 git add .
 git commit -m "Initial commit"
 git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/document-web-chat.git
+git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
 git push -u origin main
 ```
 
-### Step 2: Deploy Backend (Railway — Recommended)
+### Step 2: Set Up Upstash Redis
 
-1. Go to [Railway](https://railway.app) and sign in with GitHub
-2. Click **New Project** → **Deploy from GitHub repo**
-3. Select your repo and the `backend` directory as the root
-4. Add environment variables in Railway Dashboard:
+**All backend platforms need a hosted Redis. Upstash is free and works everywhere.**
+
+1. Go to [upstash.com](https://upstash.com) → **Create Database** → Redis
+2. Copy the `REDIS_URL` (format: `redis://default:password@host:port`)
+3. You'll paste this into your backend platform's environment variables
+
+---
+
+### Step 3: Choose & Deploy Backend
+
+Pick **one** platform below. Render is the easiest free option.
+
+#### Option A: Render (Recommended — Free Tier)
+
+1. Go to [render.com](https://render.com) → sign in with GitHub
+2. Click **New** → **Web Service** → Connect your GitHub repo
+3. Configure:
+   - **Name**: `document-web-chat-backend`
+   - **Root Directory**: `backend`
+   - **Runtime**: Python 3
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn -w 1 -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT`
+4. Add environment variables:
    - `OPENAI_API_KEY`
    - `OPENAI_BASE_URL` = `https://openrouter.ai/api/v1`
    - `LLM_MODEL` = `openai/gpt-4o-mini`
-   - `REDIS_URL` = *(from Upstash, see below)*
-   - `CORS_ORIGINS` = `https://your-frontend.vercel.app`
-5. Railway auto-detects `requirements.txt` and `Procfile`
-6. Copy your backend URL (e.g., `https://document-web-chat-backend.up.railway.app`)
+   - `REDIS_URL` = *(from Upstash)*
+   - `CORS_ORIGINS` = `https://your-frontend.vercel.app` *(update after Vercel deploy)*
+5. Click **Create Web Service**
 
-**Alternative: Render**
-1. Go to [Render](https://render.com) → **New Web Service**
-2. Connect your GitHub repo
-3. Set root directory to `backend`
-4. Build command: `pip install -r requirements.txt`
-5. Start command: `gunicorn -w 1 -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT`
-6. Add environment variables同上
+**Note**: Free tier sleeps after 15 min inactivity. First request after sleep takes ~30s.
 
-### Step 3: Set Up Upstash Redis
+**Copy your backend URL** (e.g., `https://document-web-chat-backend.onrender.com`)
 
-1. Go to [Upstash](https://upstash.com) → **Create Database**
-2. Choose the Redis option
-3. Copy the `REDIS_URL` (format: `redis://default:password@host:port`)
-4. Paste it into your backend environment variables
+---
+
+#### Option B: Fly.io (Generous Free Tier, Stays Awake)
+
+1. Install Fly CLI:
+   ```bash
+   brew install flyctl  # macOS
+   # or see https://fly.io/docs/hands-on/install-flyctl/
+   ```
+2. Login: `flyctl auth login`
+3. Deploy backend:
+   ```bash
+   cd backend
+   flyctl launch --name document-web-chat-backend --region iad --no-deploy
+   flyctl secrets set OPENAI_API_KEY=sk-or-v1-...
+   flyctl secrets set OPENAI_BASE_URL=https://openrouter.ai/api/v1
+   flyctl secrets set LLM_MODEL=openai/gpt-4o-mini
+   flyctl secrets set REDIS_URL=redis://... (from Upstash)
+   flyctl secrets set CORS_ORIGINS=https://your-frontend.vercel.app
+   flyctl deploy
+   ```
+
+**Copy your backend URL** (e.g., `https://document-web-chat-backend.fly.dev`)
+
+**Note**: Fly.io free tier includes 3 shared-cpu-1m VMs. VMs stay awake.
+
+---
+
+#### Option C: Heroku (Simplest, But Paid)
+
+1. Install Heroku CLI:
+   ```bash
+   brew install heroku  # macOS
+   ```
+2. Login: `heroku login`
+3. Deploy:
+   ```bash
+   cd backend
+   heroku create document-web-chat-backend
+   heroku config:set OPENAI_API_KEY=sk-or-v1-...
+   heroku config:set OPENAI_BASE_URL=https://openrouter.ai/api/v1
+   heroku config:set LLM_MODEL=openai/gpt-4o-mini
+   heroku config:set REDIS_URL=redis://... (from Upstash)
+   heroku config:set CORS_ORIGINS=https://your-frontend.vercel.app
+   git push heroku main
+   ```
+
+**Note**: Heroku has no free tier. Minimum $7/month for Eco dynos.
+
+---
+
+#### Option D: DigitalOcean App Platform ($5/month)
+
+1. Go to [cloud.digitalocean.com](https://cloud.digitalocean.com) → **Create App**
+2. Source: GitHub → select your repo
+3. Source Directory: `backend/`
+4. Environment: Python
+5. Run Command: `gunicorn -w 1 -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:$PORT`
+6. Add environment variables (same as Render)
+7. Deploy
+
+---
+
+#### Option E: PythonAnywhere (Free Tier)
+
+1. Go to [pythonanywhere.com](https://pythonanywhere.com) → sign up
+2. Open a Bash console
+3. Clone your repo:
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+   cd YOUR_REPO_NAME/backend
+   python3.11 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+4. Go to **Web** tab → **Add a new web app** → **Manual configuration** → Python 3.11
+5. Set WSGI file to use uvicorn:
+   ```python
+   import sys
+   path = '/home/YOUR_USERNAME/YOUR_REPO_NAME/backend'
+   if path not in sys.path:
+       sys.path.append(path)
+   from app.main import app
+   application = app
+   ```
+6. Set environment variables in **WSGI configuration file** or via the web tab
+7. Reload the web app
+
+---
 
 ### Step 4: Deploy Frontend (Vercel)
 
-1. Go to [Vercel](https://vercel.com) and sign in with GitHub
+1. Go to [vercel.com](https://vercel.com) → sign in with GitHub
 2. Click **Add New Project** → Import your GitHub repo
-3. Set **Framework Preset** to `Vite`
-4. Set **Root Directory** to `frontend`
-5. Add environment variable:
-   - `VITE_API_BASE` = `https://your-backend.railway.app/api/v1`
-6. Click **Deploy**
+3. Configure:
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: `frontend`
+4. Add environment variable:
+   - `VITE_API_BASE` = `https://your-backend-url.com/api/v1`
+     - Render example: `https://document-web-chat-backend.onrender.com/api/v1`
+     - Fly.io example: `https://document-web-chat-backend.fly.dev/api/v1`
+5. Click **Deploy**
+
+**Copy your frontend URL** (e.g., `https://your-frontend.vercel.app`)
+
+---
 
 ### Step 5: Connect Frontend ↔ Backend
 
-1. Update backend `CORS_ORIGINS` env var with your Vercel domain:
-   ```
-   CORS_ORIGINS=https://your-frontend.vercel.app
-   ```
-2. Redeploy backend if you changed CORS settings
+After Vercel gives you a domain, update your backend's `CORS_ORIGINS`:
+
+- **Render**: Go to dashboard → Environment → edit `CORS_ORIGINS` to `https://your-frontend.vercel.app`
+- **Fly.io**: `flyctl secrets set CORS_ORIGINS=https://your-frontend.vercel.app && flyctl deploy`
+- **Heroku**: `heroku config:set CORS_ORIGINS=https://your-frontend.vercel.app`
+- **DigitalOcean**: Update in App Platform settings
+- **PythonAnywhere**: Update in web tab environment variables
 
 ---
 
@@ -253,10 +361,10 @@ document-web-chat/
 │   │   └── utils/text_cleaner.py
 │   ├── tests/test_flow.py
 │   ├── requirements.txt
-│   ├── Procfile
-│   ├── railway.json
-│   ├── render.yaml
-│   └── start.sh
+│   ├── Procfile           # Heroku / Render
+│   ├── render.yaml        # Render
+│   ├── fly.toml           # Fly.io
+│   └── start.sh           # Startup script
 ├── frontend/
 │   ├── src/
 │   │   ├── App.tsx
