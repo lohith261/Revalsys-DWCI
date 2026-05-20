@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  body {
+    @apply bg-slate-950 text-white antialiased;
+    background: linear-gradient(135deg, #020617 0%, #1e1b4b 50%, #0f172a 100%);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply backdrop-blur-xl bg-white/5 border border-white/10;
+  }
+  .glass-strong {
+    @apply backdrop-blur-2xl bg-white/10 border border-white/20;
+  }
+  .glow-indigo {
+    box-shadow: 0 0 40px -10px rgba(99, 102, 241, 0.3);
+  }
+  .glow-focus:focus-within {
+    box-shadow: 0 0 30px -5px rgba(99, 102, 241, 0.4);
+  }
+}
+
+/* Markdown styles */
+.prose pre {
+  @apply bg-slate-900/80 rounded-lg p-4 overflow-x-auto my-3;
+}
+.prose code {
+  @apply bg-slate-800/80 px-1.5 py-0.5 rounded text-sm;
+}
+.prose p {
+  @apply mb-3 leading-relaxed;
+}
+.prose ul {
+  @apply list-disc pl-5 mb-3;
+}
+.prose ol {
+  @apply list-decimal pl-5 mb-3;
+}
+.prose h1, .prose h2, .prose h3 {
+  @apply font-semibold mb-2 mt-4;
+}
+.prose h1 { @apply text-xl; }
+.prose h2 { @apply text-lg; }
+.prose h3 { @apply text-base; }
+.prose blockquote {
+  @apply border-l-2 border-indigo-500 pl-4 italic text-slate-300 my-3;
+}
+.prose table {
+  @apply w-full text-sm my-3 border-collapse;
+}
+.prose th, .prose td {
+  @apply border border-white/10 px-3 py-2;
+}
+.prose th {
+  @apply bg-white/5 font-medium;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-white/20;
+}
