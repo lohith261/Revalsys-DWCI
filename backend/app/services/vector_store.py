@@ -15,7 +15,14 @@ class VectorStore:
         os.makedirs(self.persist_dir, exist_ok=True)
         self.client = chromadb.PersistentClient(path=self.persist_dir)
         self.collection = self.client.get_or_create_collection(name="documents")
-        self.model = SentenceTransformer(self.settings.embedding_model)
+        self._model = None
+
+    @property
+    def model(self):
+        """Lazy-load the embedding model to avoid blocking app startup."""
+        if self._model is None:
+            self._model = SentenceTransformer(self.settings.embedding_model)
+        return self._model
 
     def index_chunks(self, file_id: str, file_name: str, chunks: List[str]) -> int:
         """Index document chunks into vector store."""
