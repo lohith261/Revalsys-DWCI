@@ -4,25 +4,15 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 
 from app.models.schemas import ChatRequest, ChatResponse, SessionResponse, MessageItem, ReferencedFile
-from app.services.chat_engine import ChatEngine
-from app.services.vector_store import VectorStore
-from app.services.redis_cache import RedisCache
-from app.services.llm_client import LLMClient
-from app.services.web_search import WebSearch
+from app.services.singletons import get_chat_engine, get_redis_cache
 
 router = APIRouter(prefix="/api/v1")
-
-# Shared service instances
-vector_store = VectorStore()
-redis_cache = RedisCache()
-llm_client = LLMClient()
-web_search = WebSearch()
-chat_engine = ChatEngine(vector_store, redis_cache, llm_client, web_search)
 
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
+        chat_engine = get_chat_engine()
         result = chat_engine.run(
             query=request.query,
             session_id=request.session_id,
@@ -44,6 +34,7 @@ async def chat(request: ChatRequest):
 
 @router.get("/session/{session_id}", response_model=SessionResponse)
 async def get_session(session_id: str):
+    redis_cache = get_redis_cache()
     messages = redis_cache.get_session_history(session_id)
     files = redis_cache.get_session_files(session_id)
     return SessionResponse(
@@ -55,10 +46,12 @@ async def get_session(session_id: str):
 
 @router.delete("/session/{session_id}")
 async def delete_session(session_id: str):
+    redis_cache = get_redis_cache()
     redis_cache.clear_session(session_id)
     return {"status": "deleted", "session_id": session_id}
 
 
 @router.get("/sessions")
 async def list_sessions():
+    redis_cache = get_redis_cache()
     return redis_cache.get_all_sessions()

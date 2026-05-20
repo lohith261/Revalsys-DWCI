@@ -4,16 +4,9 @@ from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
 from app.models.schemas import UploadResponse
-from app.services.document_processor import DocumentProcessor
-from app.services.vector_store import VectorStore
-from app.services.redis_cache import RedisCache
+from app.services.singletons import get_document_processor, get_vector_store, get_redis_cache
 
 router = APIRouter(prefix="/api/v1")
-
-# Shared service instances
-doc_processor = DocumentProcessor()
-vector_store = VectorStore()
-redis_cache = RedisCache()
 
 
 @router.post("/upload", response_model=UploadResponse)
@@ -30,6 +23,10 @@ async def upload_file(
 
     try:
         contents = await file.read()
+        doc_processor = get_document_processor()
+        vector_store = get_vector_store()
+        redis_cache = get_redis_cache()
+
         file_id, cleaned_text, chunks = doc_processor.process_file(contents, file.filename)
         chunks_indexed = vector_store.index_chunks(file_id, file.filename, chunks)
 

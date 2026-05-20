@@ -2,9 +2,6 @@ import os
 import uuid
 from typing import List, Dict, Optional
 
-import chromadb
-from sentence_transformers import SentenceTransformer
-
 from app.config import get_settings
 
 
@@ -13,6 +10,8 @@ class VectorStore:
         self.settings = get_settings()
         self.persist_dir = os.path.join(os.getcwd(), "chroma_data")
         os.makedirs(self.persist_dir, exist_ok=True)
+        # Lazy imports to avoid slow startup on Render
+        import chromadb
         self.client = chromadb.PersistentClient(path=self.persist_dir)
         self.collection = self.client.get_or_create_collection(name="documents")
         self._model = None
@@ -21,6 +20,7 @@ class VectorStore:
     def model(self):
         """Lazy-load the embedding model to avoid blocking app startup."""
         if self._model is None:
+            from sentence_transformers import SentenceTransformer
             self._model = SentenceTransformer(self.settings.embedding_model)
         return self._model
 
@@ -90,4 +90,5 @@ class VectorStore:
     def reset(self) -> None:
         """Clear all data."""
         self.client.delete_collection("documents")
+        import chromadb
         self.collection = self.client.get_or_create_collection(name="documents")

@@ -3,8 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.routers import upload, chat
-from app.services.vector_store import VectorStore
-from app.services.redis_cache import RedisCache
+from app.services.singletons import get_vector_store, get_redis_cache
 
 settings = get_settings()
 
@@ -32,16 +31,13 @@ app.add_middleware(
 app.include_router(upload.router)
 app.include_router(chat.router)
 
-# Service health check instances
-vector_store = VectorStore()
-redis_cache = RedisCache()
-
 
 @app.get("/api/v1/health")
 async def health_check():
     from datetime import datetime
+    redis_cache = get_redis_cache()
+    vector_store = get_vector_store()
     redis_ok = redis_cache.health_check()
-    # Simple vector db check
     vector_ok = True
     try:
         vector_store.collection.count()
